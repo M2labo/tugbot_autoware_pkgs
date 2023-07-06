@@ -21,6 +21,7 @@ install(TARGETS
 
 install(DIRECTORY
   launch
+  param
   DESTINATION share/${PROJECT_NAME}/
 )
 
