@@ -1,0 +1,271 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<launch>
+  <!-- Essential parameters -->
+  <arg name="map_path" description="point cloud and lanelet2 map directory path"/>
+  <arg name="vehicle_model" description="vehicle model name"/>
+  <arg name="sensor_model" description="sensor model name"/>
+  <arg name="vehicle_id" default="$(env VEHICLE_ID default)" description="vehicle specific ID"/>
+
+  <!-- Optional parameters -->
+  <!-- Map -->
+  <arg name="lanelet2_map_file" default="lanelet2_map.osm" description="lanelet2 map file name"/>
+  <arg name="pointcloud_map_file" default="pointcloud_map.pcd" description="pointcloud map file name"/>
+  <!-- Control -->
+  <!-- Vehicle -->
+  <arg name="launch_vehicle_interface" default="false"/>
+  <!-- System -->
+  <arg name="system_run_mode" default="online" description="run mode in system"/>
+  <!-- Tools -->
+  <arg name="rviz" default="true" description="launch rviz"/>
+  <arg name="rviz_config" default="$(find-pkg-share tugbot_autoware_pkg)/rviz/autoware-mini.rviz" description="rviz config"/>
+
+  <arg name="use_sim_time" default="true"/>
+
+  <!-- Global parameters -->
+  <group scoped="false">
+    <include file="$(find-pkg-share global_parameter_loader)/launch/global_params.launch.py">
+      <arg name="use_sim_time" value="$(var use_sim_time)"/>
+      <arg name="vehicle_model" value="$(var vehicle_model)"/>
+    </include>
+  </group>
+
+  <!-- Vehicle -->
+
+  <!-- vehicle description -->
+  <group>
+    <arg name="model_file" default="$(find-pkg-share tier4_vehicle_launch)/urdf/vehicle.xacro" description="path to the file of model settings (*.xacro)"/>
+    <arg name="config_dir" default="$(find-pkg-share individual_params)/config/default/$(var sensor_model)"/>
+    <node name="robot_state_publisher" pkg="robot_state_publisher" exec="robot_state_publisher">
+      <param name="robot_description" value="$(command 'xacro $(var model_file) vehicle_model:=$(var vehicle_model) sensor_model:=$(var sensor_model) config_dir:=$(var config_dir)' 'warn')"/>
+    </node>
+  </group>
+
+  <!-- vehicle interface -->
+  <!-- No Vehicle Interface -->
+
+  <!-- Map -->
+  <group>
+    <push-ros-namespace namespace="map"/>
+
+    <!-- map_loader::map_hash_generator -->
+    <node name="map_hash_generator" pkg="map_loader" exec="map_hash_generator">
+      <param name="lanelet2_map_path" value="$(var map_path)/$(var lanelet2_map_file)" />
+      <param name="pointcloud_map_path" value="$(var map_path)/$(var pointcloud_map_file)" />
+    </node>
+
+    <!-- map_container -->
+    <node_container pkg="rclcpp_components" exec="component_container" name="map_container" namespace="">
+
+      <!-- map_loader::Lanelet2MapLoaderNode -->
+      <composable_node pkg="map_loader" plugin="Lanelet2MapLoaderNode" name="lanelet2_map_loader" namespace="">
+        <remap from="output/lanelet2_map" to="vector_map" />
+        <param name="lanelet2_map_path" value="$(var map_path)/$(var lanelet2_map_file)" />
+        <param from="$(find-pkg-share autoware_launch)/config/map/lanelet2_map_loader.param.yaml" />
+        <extra_arg name="use_intra_process_comms" value="false" />
+      </composable_node>
+
+      <!-- map_loader::Lanelet2MapVisualizationNode -->
+      <composable_node pkg="map_loader" plugin="Lanelet2MapVisualizationNode" name="lanelet2_map_visualization" namespace="">
+        <remap from="input/lanelet2_map" to="vector_map" />
+        <remap from="output/lanelet2_map_marker" to="vector_map_marker" />
+        <param name="lanelet2_map_path" value="$(var map_path)/$(var lanelet2_map_file)" />
+        <param from="$(find-pkg-share autoware_launch)/config/map/lanelet2_map_loader.param.yaml" />
+        <extra_arg name="use_intra_process_comms" value="false" />
+      </composable_node>
+
+      <!-- map_loader::PointCloudMapLoaderNode -->
+      <composable_node pkg="map_loader" plugin="PointCloudMapLoaderNode" name="pointcloud_map_loader" namespace="">
+        <remap from="output/pointcloud_map" to="pointcloud_map" />
+        <remap from="service/get_partial_pcd_map" to="/map/get_partial_pointcloud_map" />
+        <remap from="service/get_differential_pcd_map" to="/map/get_differential_pointcloud_map" />
+        <param name="pcd_paths_or_directory" value="[$(var map_path)/$(var pointcloud_map_file)]" />
+        <param name="pcd_metadata_path" value=""/>
+        <param from="$(find-pkg-share autoware_launch)/config/map/pointcloud_map_loader.param.yaml" />
+        <extra_arg name="use_intra_process_comms" value="false" />
+      </composable_node>
+
+      <!-- map_tf_generator::VectorMapTFGeneratorNode -->
+      <composable_node pkg="map_tf_generator" plugin="VectorMapTFGeneratorNode" name="vector_map_tf_generator" namespace="">
+        <param name="map_frame" value="map" />
+        <param name="viewer_frame" value="viewer" />
+        <extra_arg name="use_intra_process_comms" value="false" />
+      </composable_node>
+      
+    </node_container>
+
+  </group> <!-- map -->
+
+
+  <!-- Localization -->
+  <group>
+    <push-ros-namespace namespace="localization"/>
+
+    <group>
+      <push-ros-namespace namespace="util"/>
+
+      <!-- pose_initializer -->
+      <node pkg="pose_initializer" exec="pose_initializer_node" name="pose_initializer_node">
+        <remap from="ndt_align" to="/localization/pose_estimator/ndt_align_srv"/>
+        <remap from="stop_check_twist" to="/sensing/vehicle_velocity_converter/twist_with_covariance"/>
+        <remap from="gnss_pose_cov" to="/sensing/gnss/pose_with_covariance"/>
+        <remap from="pose_reset" to="/initialpose3d"/>
+        <remap from="ekf_trigger_node" to="/localization/pose_estimator/trigger_node"/>
+        <remap from="ndt_trigger_node" to="/localization/pose_twist_fusion_filter/trigger_node"/>
+        <remap from="~/pointcloud_map" to="/map/pointcloud_map"/>
+        <remap from="~/partial_map_load" to="/map/get_partial_pointcloud_map"/>
+        <param name="map_loader_name" value="/map/pointcloud_map_loader"/>
+        <param name="gnss_enabled" value="false"/>
+        <param name="ekf_enabled" value="true"/>
+        <param name="ndt_enabled" value="true"/>
+        <param name="stop_check_enabled" value="false"/>
+        <param name="gnss_pose_timeout" value="3.0"/>
+        <param name="stop_check_duration" value="3.0"/>
+        <param from="$(find-pkg-share pose_initializer)/config/pose_initializer.param.yaml"/>
+      </node>
+
+      <!-- pointcloud_container -->
+      <node_container pkg="rclcpp_components" exec="component_container" name="pointcloud_container" namespace="">
+
+        <!-- pointcloud_preprocessor::CropBoxFilterComponent -->
+        <composable_node pkg="pointcloud_preprocessor" plugin="pointcloud_preprocessor::CropBoxFilterComponent" name="crop_box_filter_measurement_range" namespace="">
+          <remap from="input" to="/world/world_demo/model/tugbot/link/scan_omni/sensor/scan_omni/scan/points" />
+          <remap from="output" to="measurement_range/pointcloud" />
+          <param from="$(find-pkg-share autoware_launch)/config/localization/crop_box_filter_measurement_range.param.yaml" />
+          <extra_arg name="use_intra_process_comms" value="false" />
+        </composable_node>
+
+        <!-- pointcloud_preprocessor::VoxelGridDownsampleFilterComponent -->
+        <composable_node pkg="pointcloud_preprocessor" plugin="pointcloud_preprocessor::VoxelGridDownsampleFilterComponent" name="voxel_grid_downsample_filter" namespace="">
+          <remap from="input" to="measurement_range/pointcloud" />
+          <remap from="output" to="downsample/pointcloud" />
+          <param from="$(find-pkg-share autoware_launch)/config/localization/voxel_grid_filter.param.yaml" />
+          <extra_arg name="use_intra_process_comms" value="false" />
+        </composable_node>
+
+      </node_container>
+
+    </group> <!-- util -->
+
+    <!-- pose_estimator -->
+    <group>
+      <push-ros-namespace namespace="pose_estimator"/>
+
+      <!-- ndt_scan_matcher -->
+      <node pkg="ndt_scan_matcher" exec="ndt_scan_matcher" name="ndt_scan_matcher" output="log">
+        <remap from="points_raw" to="/localization/util/downsample/pointcloud"/>
+        <remap from="ekf_pose_with_covariance" to="/localization/pose_twist_fusion_filter/biased_pose_with_covariance"/>
+        <remap from="pointcloud_map" to="/map/pointcloud_map"/>
+        <remap from="ndt_pose" to="/localization/pose_estimator/pose"/>
+        <remap from="ndt_pose_with_covariance" to="/localization/pose_estimator/pose_with_covariance"/>
+        <remap from="regularization_pose_with_covariance" to="/sensing/gnss/pose_with_covariance"/>
+        <remap from="trigger_node_srv" to="trigger_node"/>
+        <remap from="pcd_loader_service" to="/map/get_differential_pointcloud_map"/>
+        <remap from="ekf_odom" to="/localization/kinematic_state"/>
+        <param from="$(find-pkg-share autoware_launch)/config/localization/ndt_scan_matcher.param.yaml"/>
+      </node>
+
+    </group>
+
+    <!-- twist_estimator -->
+    <group>
+      <push-ros-namespace namespace="twist_estimator"/>
+
+      <!-- gyro_odometer -->
+      <node pkg="gyro_odometer" exec="gyro_odometer" name="gyro_odometer" output="screen">
+        <remap from="vehicle/twist_with_covariance" to="/sensing/vehicle_velocity_converter/twist_with_covariance"/>
+        <remap from="imu" to="/sensing/imu/imu_data"/>
+        <remap from="twist_raw" to="gyro_twist_raw"/>
+        <remap from="twist_with_covariance_raw" to="/localization/twist_estimator/twist_with_covariance_raw"/>
+        <remap from="twist" to="gyro_twist"/>
+        <remap from="twist_with_covariance" to="/localization/twist_estimator/twist_with_covariance"/>
+        <param name="output_frame" value="base_link"/>
+        <param name="message_timeout_sec" value="0.5"/>
+      </node>
+
+    </group>
+
+    <!-- pose_twist_fusion_filter -->
+    <group>
+      <push-ros-namespace namespace="pose_twist_fusion_filter"/>
+
+      <!-- ekf_localizer -->
+      <node pkg="ekf_localizer" exec="ekf_localizer" name="ekf_localizer" output="screen">
+        <remap from="in_pose_with_covariance" to="/localization/pose_estimator/pose_with_covariance"/>
+        <remap from="in_twist_with_covariance" to="/localization/twist_estimator/twist_with_covariance"/>
+        <remap from="initialpose" to="/initialpose3d"/>
+        <remap from="trigger_node_srv" to="trigger_node"/>
+        <remap from="ekf_odom" to="kinematic_state"/>
+        <remap from="ekf_pose" to="pose"/>
+        <remap from="ekf_pose_with_covariance" to="/localization/pose_with_covariance"/>
+        <remap from="ekf_biased_pose" to="biased_pose"/>
+        <remap from="ekf_biased_pose_with_covariance" to="biased_pose_with_covariance"/>
+        <remap from="ekf_twist" to="twist"/>
+        <remap from="ekf_twist_with_covariance" to="twist_with_covariance"/>
+        <param name="pose_frame_id" value="map"/>
+        <param name="show_debug_info" value="false"/>
+        <param name="enable_yaw_bias_estimation" value="true"/>
+        <param name="predict_frequency" value="50.0"/>
+        <param name="tf_rate" value="50.0"/>
+        <param name="extend_state_step" value="50"/>
+        <param name="pose_additional_delay" value="0.0"/>
+        <param name="pose_measure_uncertainty_time" value="0.01"/>
+        <param name="pose_smoothing_steps" value="5"/>
+        <param name="pose_gate_dist" value="10000.0"/>
+        <param name="twist_additional_delay" value="0.0"/>
+        <param name="twist_smoothing_steps" value="2"/>
+        <param name="twist_gate_dist" value="10000.0"/>
+        <param name="proc_stddev_yaw_c" value="0.005"/>
+        <param name="proc_stddev_vx_c" value="10.0"/>
+        <param name="proc_stddev_wz_c" value="5.0"/>
+      </node>
+
+      <!-- stop_filter -->
+      <group>
+        <node pkg="stop_filter" exec="stop_filter" name="stop_filter" output="screen">
+          <param name="vx_threshold" value="0.01"/>
+          <param name="wz_threshold" value="0.01"/>
+          <remap from="input/odom" to="/localization/pose_twist_fusion_filter/kinematic_state"/>
+          <remap from="output/odom" to="/localization/kinematic_state"/>
+          <remap from="debug/stop_flag" to="debug/stop_flag"/>
+        </node>
+      </group>
+
+      <!-- twist2accel -->
+      <group>
+        <node pkg="twist2accel" exec="twist2accel" name="twist2accel" output="screen">
+          <param name="accel_lowpass_gain" value="0.9"/>
+          <param name="use_odom" value="true"/>
+          <remap from="input/odom" to="/localization/kinematic_state"/>
+          <remap from="input/twist" to="/localization/twist_estimator/twist_with_covariance"/>
+          <remap from="output/accel" to="/localization/acceleration"/>
+        </node>
+      </group>
+
+    </group> <!-- pose_twist_fusion_filter -->
+
+  </group> <!-- localization -->
+
+  <!-- System -->
+  <group>
+    <include file="$(find-pkg-share autoware_launch)/launch/components/tier4_system_component.launch.xml">
+      <arg name="launch_system_monitor" value="false"/>
+      <arg name="launch_dummy_diag_publisher" value="false"/>
+    </include>
+  </group>
+
+  <!-- API -->
+  <group>
+    <!-- default_ad_api -->
+    <include file="$(find-pkg-share default_ad_api)/launch/default_ad_api.launch.py" />
+
+    <!-- ad_api_adaptors -->
+    <include file="$(find-pkg-share ad_api_adaptors)/launch/rviz_adaptors.launch.xml" />
+  </group>
+
+
+  <!-- Rviz2 -->
+  <group>
+    <node pkg="rviz2" exec="rviz2" name="rviz2" output="screen" args="-d $(var rviz_config) -s $(find-pkg-share autoware_launch)/rviz/image/autoware.png" />
+  </group>
+
+</launch>

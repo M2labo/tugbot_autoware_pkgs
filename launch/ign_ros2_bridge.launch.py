@@ -23,7 +23,7 @@ def generate_launch_description():
             ],
             remappings=[
                 ('/model/tugbot/tf', '/tf'),
-                ('/model/tugbot/odometry', '/localization/kinematic_state'),
+                #('/model/tugbot/odometry', '/localization/kinematic_state'),
             ],
             output='screen',
             parameters=[
