@@ -64,7 +64,7 @@
       <composable_node pkg="map_loader" plugin="Lanelet2MapLoaderNode" name="lanelet2_map_loader" namespace="">
         <remap from="output/lanelet2_map" to="vector_map" />
         <param name="lanelet2_map_path" value="$(var map_path)/$(var lanelet2_map_file)" />
-        <param from="$(find-pkg-share autoware_launch)/config/map/lanelet2_map_loader.param.yaml" />
+        <param from="$(var config_path)map/lanelet2_map_loader.param.yaml" />
         <extra_arg name="use_intra_process_comms" value="false" />
       </composable_node>
 
@@ -73,7 +73,7 @@
         <remap from="input/lanelet2_map" to="vector_map" />
         <remap from="output/lanelet2_map_marker" to="vector_map_marker" />
         <param name="lanelet2_map_path" value="$(var map_path)/$(var lanelet2_map_file)" />
-        <param from="$(find-pkg-share autoware_launch)/config/map/lanelet2_map_loader.param.yaml" />
+        <param from="$(var config_path)map/lanelet2_map_loader.param.yaml" />
         <extra_arg name="use_intra_process_comms" value="false" />
       </composable_node>
 
@@ -84,12 +84,13 @@
         <remap from="service/get_differential_pcd_map" to="/map/get_differential_pointcloud_map" />
         <param name="pcd_paths_or_directory" value="[$(var map_path)/$(var pointcloud_map_file)]" />
         <param name="pcd_metadata_path" value=""/>
-        <param from="$(find-pkg-share autoware_launch)/config/map/pointcloud_map_loader.param.yaml" />
+        <param from="$(var config_path)map/pointcloud_map_loader.param.yaml" />
         <extra_arg name="use_intra_process_comms" value="false" />
       </composable_node>
 
       <!-- map_tf_generator::VectorMapTFGeneratorNode -->
       <composable_node pkg="map_tf_generator" plugin="VectorMapTFGeneratorNode" name="vector_map_tf_generator" namespace="">
+        <remap from="vector_map" to="vector_map" />
         <param name="map_frame" value="map" />
         <param name="viewer_frame" value="viewer" />
         <extra_arg name="use_intra_process_comms" value="false" />
@@ -98,7 +99,6 @@
     </node_container>
 
   </group> <!-- map -->
-
 
   <!-- Localization -->
   <group>
@@ -124,7 +124,8 @@
         <param name="stop_check_enabled" value="false"/>
         <param name="gnss_pose_timeout" value="3.0"/>
         <param name="stop_check_duration" value="3.0"/>
-        <param from="$(var config_path)pose_initializer.param.yaml"/>
+        <param from="$(var config_path)localization/pose_initializer.param.yaml"/>
+        <param from="$(var config_path)localization/pose_initializer_common.param.yaml"/>
       </node>
 
       <!-- pointcloud_container -->
@@ -134,7 +135,7 @@
         <composable_node pkg="pointcloud_preprocessor" plugin="pointcloud_preprocessor::CropBoxFilterComponent" name="crop_box_filter_measurement_range" namespace="">
           <remap from="input" to="$(var lidar_point)" />
           <remap from="output" to="measurement_range/pointcloud" />
-          <param from="$(find-pkg-share autoware_launch)/config/localization/crop_box_filter_measurement_range.param.yaml" />
+          <param from="$(var config_path)localization/crop_box_filter_measurement_range.param.yaml" />
           <extra_arg name="use_intra_process_comms" value="false" />
         </composable_node>
 
@@ -142,7 +143,7 @@
         <composable_node pkg="pointcloud_preprocessor" plugin="pointcloud_preprocessor::VoxelGridDownsampleFilterComponent" name="voxel_grid_downsample_filter" namespace="">
           <remap from="input" to="measurement_range/pointcloud" />
           <remap from="output" to="downsample/pointcloud" />
-          <param from="$(find-pkg-share autoware_launch)/config/localization/voxel_grid_filter.param.yaml" />
+          <param from="$(var config_path)localization/voxel_grid_filter.param.yaml" />
           <extra_arg name="use_intra_process_comms" value="false" />
         </composable_node>
 
@@ -165,7 +166,7 @@
         <remap from="trigger_node_srv" to="trigger_node"/>
         <remap from="pcd_loader_service" to="/map/get_differential_pointcloud_map"/>
         <remap from="ekf_odom" to="/localization/kinematic_state"/>
-        <param from="$(find-pkg-share autoware_launch)/config/localization/ndt_scan_matcher.param.yaml"/>
+        <param from="$(var config_path)localization/ndt_scan_matcher.param.yaml"/>
       </node>
 
     </group>
@@ -264,7 +265,7 @@
 
         <!-- pointcloud_preprocessor::CropBoxFilterComponent -->
         <composable_node pkg="pointcloud_preprocessor" plugin="pointcloud_preprocessor::CropBoxFilterComponent" name="crop_box_filter" namespace="">
-          <remap from="input" to="/sensing/lidar/top/outlier_filtered/pointcloud" />
+          <remap from="input" to="$(var lidar_point)" />
           <remap from="output" to="range_cropped/pointcloud" />
           <param name="input_frame" value="base_link"/>
           <param name="output_frame" value="base_link"/>
@@ -363,6 +364,7 @@
           <param name="enable_delay_compensation" value="false"/>
           <param from="$(find-pkg-share multi_object_tracker)/config/default_tracker.param.yaml"/>
           <param from="$(find-pkg-share multi_object_tracker)/config/data_association_matrix.param.yaml"/>
+
         </node>
 
       </group> <!-- tracking -->
@@ -442,18 +444,17 @@
               <remap from="~/output/turn_indicators_cmd" to="/planning/turn_indicators_cmd" />
               <remap from="~/output/hazard_lights_cmd" to="/planning/hazard_lights_cmd" />
               <remap from="~/output/modified_goal" to="/planning/scenario_planning/modified_goal" />
-              <param name="bt_tree_config_path" value="$(find-pkg-share autoware_launch)/config/planning/scenario_planning/lane_driving/behavior_planning/behavior_path_planner/behavior_path_planner_tree.xml"/>
+              <param name="bt_tree_config_path" value="$(var config_path)planning/scenario_planning/lane_driving/behavior_planning/behavior_path_planner/behavior_path_planner_tree.xml"/>
               <param name="lane_change.enable_abort_lane_change" value="false"/>
               <param name="lane_change.enable_collision_check_at_prepare_phase" value="false"/>
               <param name="lane_change.use_predicted_path_outside_lanelet" value="false"/>
               <param name="lane_change.use_all_predicted_path" value="false"/>
               <param from="$(var config_path)planning/scenario_planning/common/nearest_search.param.yaml" />
+              <param from="$(var config_path)planning/scenario_planning/lane_driving/behavior_planning/behavior_path_planner/scene_module_manager.param.yaml" />
               <param from="$(var config_path)planning/scenario_planning/common/common.param.yaml" />
               <param from="$(var config_path)planning/scenario_planning/lane_driving/behavior_planning/behavior_path_planner/side_shift/side_shift.param.yaml" />
               <param from="$(var config_path)planning/scenario_planning/lane_driving/behavior_planning/behavior_path_planner/avoidance/avoidance.param.yaml" />
               <param from="$(var config_path)planning/scenario_planning/lane_driving/behavior_planning/behavior_path_planner/lane_change/lane_change.param.yaml" />
-              <param from="$(var config_path)planning/scenario_planning/lane_driving/behavior_planning/behavior_path_planner/pull_over/pull_over.param.yaml" />
-              <param from="$(var config_path)planning/scenario_planning/lane_driving/behavior_planning/behavior_path_planner/lane_following/lane_following.param.yaml" />
               <param from="$(var config_path)planning/scenario_planning/lane_driving/behavior_planning/behavior_path_planner/behavior_path_planner.param.yaml" />
               <param from="$(var config_path)planning/scenario_planning/lane_driving/behavior_planning/behavior_path_planner/drivable_area_expansion.param.yaml" />
               <param from="$(var config_path)planning/scenario_planning/lane_driving/behavior_planning/behavior_path_planner/start_planner/start_planner.param.yaml" />
@@ -484,6 +485,7 @@
               <param from="$(var config_path)planning/scenario_planning/common/common.param.yaml" />
               <param from="$(var config_path)planning/scenario_planning/common/motion_velocity_smoother/Analytical.param.yaml" />
               <param from="$(var config_path)planning/scenario_planning/lane_driving/behavior_planning/behavior_velocity_planner/blind_spot.param.yaml" />
+              <param from="$(var config_path)planning/scenario_planning/lane_driving/behavior_planning/behavior_velocity_planner/out_of_lane.param.yaml" />
               <param from="$(var config_path)planning/scenario_planning/lane_driving/behavior_planning/behavior_velocity_planner/crosswalk.param.yaml" />
               <param from="$(var config_path)planning/scenario_planning/lane_driving/behavior_planning/behavior_velocity_planner/detection_area.param.yaml" />
               <param from="$(var config_path)planning/scenario_planning/lane_driving/behavior_planning/behavior_velocity_planner/intersection.param.yaml" />
@@ -554,9 +556,11 @@
 
 
   <!-- Control -->
-  <!-- <group>
-    <include file="$(find-pkg-share autoware_launch)/launch/components/tier4_control_component.launch.xml"/>
-  </group> -->
+  <group>
+    <include file="$(find-pkg-share autoware_launch)/launch/components/tier4_control_component.launch.xml">
+      <arg name="check_external_emergency_heartbeat" value="false"/>
+    </include>
+  </group>
 
   <!-- System -->
   <group>
@@ -575,7 +579,11 @@
     <include file="$(find-pkg-share ad_api_adaptors)/launch/rviz_adaptors.launch.xml" />
   </group>
 
-
+  <group>
+    <include file="$(find-pkg-share tugbot_autoware_pkg)/launch/tugbot_autoware.launch.py">
+    </include>
+  </group>
+  
   <!-- Rviz2 -->
   <group>
     <node pkg="rviz2" exec="rviz2" name="rviz2" output="screen" args="-d $(var rviz_config) -s $(find-pkg-share autoware_launch)/rviz/image/autoware.png" />
