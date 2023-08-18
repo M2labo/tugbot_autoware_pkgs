@@ -1,0 +1,13 @@
+ros2 topic echo /system/operation_mode/state
+stamp:
+  sec: 86
+  nanosec: 370000000
+mode: 1
+is_autoware_control_enabled: false
+is_in_transition: false
+is_stop_mode_available: true
+is_autonomous_mode_available: true
+is_local_mode_available: true
+is_remote_mode_available: true
+---
+

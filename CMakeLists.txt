@@ -30,6 +30,9 @@ install(TARGETS
 install(DIRECTORY
   launch
   param
+  config
+  rviz
+  map
   DESTINATION share/${PROJECT_NAME}/
 )
 
