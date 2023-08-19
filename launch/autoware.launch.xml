@@ -2,7 +2,7 @@
 <launch>
 
   <arg name="config_path" default="$(find-pkg-share tugbot_autoware_pkg)/config/" description="Path to the directory containing the rosparam config"/>
-  <arg name="lidar_point" default="/world/world_demo/model/tugbot/link/scan_omni/sensor/scan_omni/scan/points" description="Topic name of 3D LiDAR"/>
+  <arg name="lidar_point" default="/livox/lidar" description="Topic name of 3D LiDAR"/>
 
   <!-- Essential parameters -->
   <arg name="map_path" description="point cloud and lanelet2 map directory path"/>
@@ -23,7 +23,7 @@
   <arg name="rviz" default="true" description="launch rviz"/>
   <arg name="rviz_config" default="$(find-pkg-share tugbot_autoware_pkg)/rviz/autoware-mini.rviz" description="rviz config"/>
 
-  <arg name="use_sim_time" default="true"/>
+  <arg name="use_sim_time" default="false"/>
 
   <!-- Global parameters -->
   <group scoped="false">
