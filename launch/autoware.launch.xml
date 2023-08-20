@@ -57,12 +57,18 @@
       <param name="pointcloud_map_path" value="$(var map_path)/$(var pointcloud_map_file)" />
     </node>
 
+    <node pkg="map_projection_loader" exec="map_projection_loader" name="map_projection_loader" output="screen">
+      <param name="map_projector_info_path" value="$(find-pkg-share tugbot_autoware_pkg)/map/projection_info_local.yaml"/>
+      <param name="lanelet2_map_path" value="$(var map_path)/$(var lanelet2_map_file)" />
+    </node>
+
     <!-- map_container -->
     <node_container pkg="rclcpp_components" exec="component_container" name="map_container" namespace="">
 
       <!-- map_loader::Lanelet2MapLoaderNode -->
       <composable_node pkg="map_loader" plugin="Lanelet2MapLoaderNode" name="lanelet2_map_loader" namespace="">
         <remap from="output/lanelet2_map" to="vector_map" />
+        <remap from="input/map_projector_info" to="map_projector_type" />
         <param name="lanelet2_map_path" value="$(var map_path)/$(var lanelet2_map_file)" />
         <param from="$(var config_path)map/lanelet2_map_loader.param.yaml" />
         <extra_arg name="use_intra_process_comms" value="false" />
@@ -120,12 +126,12 @@
         <param name="map_loader_name" value="/map/pointcloud_map_loader"/>
         <param name="gnss_enabled" value="false"/>
         <param name="ekf_enabled" value="true"/>
+        <param name="yabloc_enabled" value="false"/>
         <param name="ndt_enabled" value="true"/>
         <param name="stop_check_enabled" value="false"/>
         <param name="gnss_pose_timeout" value="3.0"/>
         <param name="stop_check_duration" value="3.0"/>
         <param from="$(var config_path)localization/pose_initializer.param.yaml"/>
-        <param from="$(var config_path)localization/pose_initializer_common.param.yaml"/>
       </node>
 
       <!-- pointcloud_container -->
@@ -512,6 +518,7 @@
               <param from="$(var config_path)planning/scenario_planning/lane_driving/behavior_planning/behavior_velocity_planner/run_out.param.yaml" />
               <param from="$(var config_path)planning/scenario_planning/lane_driving/behavior_planning/behavior_velocity_planner/speed_bump.param.yaml" />
               <param from="$(var config_path)planning/scenario_planning/lane_driving/behavior_planning/behavior_velocity_planner/stop_line.param.yaml" />
+              <param from="$(var config_path)planning/scenario_planning/lane_driving/behavior_planning/behavior_velocity_planner/walkway.param.yaml" />
               <param from="$(var config_path)planning/scenario_planning/lane_driving/behavior_planning/behavior_velocity_planner/behavior_velocity_planner.param.yaml" />
               <param from="$(var config_path)planning/scenario_planning/common/motion_velocity_smoother/motion_velocity_smoother.param.yaml" />
               <extra_arg name="use_intra_process_comms" value="false" />
@@ -536,7 +543,6 @@
               <param from="$(var config_path)planning/scenario_planning/lane_driving/motion_planning/obstacle_avoidance_planner/obstacle_avoidance_planner.param.yaml" />
               <param from="$(var config_path)planning/scenario_planning/common/nearest_search.param.yaml" />
               <param from="$(var config_path)planning/scenario_planning/common/common.param.yaml" />
-              <param from="$(var config_path)$(var vehicle_model)_description/config/vehicle_info.param.yaml" />
               <extra_arg name="use_intra_process_comms" value="false" />
             </composable_node>
 
@@ -556,7 +562,6 @@
               <param from="$(var config_path)planning/scenario_planning/lane_driving/motion_planning/obstacle_stop_planner/adaptive_cruise_control.param.yaml" />
               <param from="$(var config_path)planning/scenario_planning/common/nearest_search.param.yaml" />
               <param from="$(var config_path)planning/scenario_planning/common/common.param.yaml" />
-              <param from="$(var config_path)$(var vehicle_model)_description/config/vehicle_info.param.yaml" />
               <extra_arg name="use_intra_process_comms" value="false" />
             </composable_node>
 

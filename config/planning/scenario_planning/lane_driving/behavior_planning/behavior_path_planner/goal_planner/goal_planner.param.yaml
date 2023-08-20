@@ -22,7 +22,7 @@
 
       # occupancy grid map
       occupancy_grid:
-        use_occupancy_grid: false
+        use_occupancy_grid: true
         use_occupancy_grid_for_longitudinal_margin: false
         occupancy_grid_collision_check_margin: 0.0
         theta_size: 360
