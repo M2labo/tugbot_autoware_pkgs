@@ -1,7 +1,7 @@
 /**:
   ros__parameters:
     # Use dynamic map loading
-    use_dynamic_map_loading: true
+    use_dynamic_map_loading: false
 
     # Vehicle reference frame
     base_frame: "base_link"
@@ -14,21 +14,21 @@
     trans_epsilon: 0.01
 
     # The newton line search maximum step length
-    step_size: 0.1
+    step_size: 0.01
 
     # The ND voxel grid resolution
-    resolution: 0.2
+    resolution: 0.4
 
     # The number of iterations required to calculate alignment
     max_iterations: 30
 
     # Converged param type
     # 0=TRANSFORM_PROBABILITY, 1=NEAREST_VOXEL_TRANSFORMATION_LIKELIHOOD
-    converged_param_type: 1
+    converged_param_type: 0
 
     # If converged_param_type is 0
     # Threshold for deciding whether to trust the estimation result
-    converged_param_transform_probability: 3.0
+    converged_param_transform_probability: 0.1
 
     # If converged_param_type is 1
     # Threshold for deciding whether to trust the estimation result
@@ -45,7 +45,7 @@
 
     # neighborhood search method
     # 0=KDTREE, 1=DIRECT26, 2=DIRECT7, 3=DIRECT1
-    neighborhood_search_method: 0
+    neighborhood_search_method: 1
 
     # Number of threads used for parallel computing
     num_threads: 4
@@ -75,10 +75,10 @@
     dynamic_map_loading_map_radius: 150.0
 
     # Radius of input LiDAR range (used for diagnostics of dynamic map loading)
-    lidar_radius: 100.0
+    lidar_radius: 30
 
     # A flag for using scan matching score based on de-grounded LiDAR scan
-    estimate_scores_for_degrounded_scan: false
+    estimate_scores_for_degrounded_scan: true
 
     # If lidar_point.z - base_link.z <= this threshold , the point will be removed
-    z_margin_for_ground_removal: -0.1
+    z_margin_for_ground_removal: -0.3
